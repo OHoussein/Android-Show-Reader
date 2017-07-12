@@ -53,3 +53,4 @@ freeline_project_description.json
 #custom
 archive
 keystore.properties
+!assets/tv_show_reader.apk
