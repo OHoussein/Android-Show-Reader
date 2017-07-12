@@ -1,0 +1,145 @@
+apply plugin: 'com.android.application'
+apply from: '../common.gradle'
+apply from: '../config/quality/quality.gradle'
+apply plugin: 'me.tatarka.retrolambda'
+
+// Load keystore
+def keystoreProperties = new Properties()
+if (rootProject.file("keystore.properties").exists()) {
+    keystoreProperties.load(new FileInputStream(rootProject.file("keystore.properties")))
+}
+def APP_NAME = "MyAppName"
+
+
+android {
+    compileSdkVersion param.compileSdkVersion
+    buildToolsVersion param.buildToolsVersion
+    defaultConfig {
+        applicationId "com.ohoussein.showreader"
+        minSdkVersion 15
+        targetSdkVersion 26
+        versionCode param.versionCode
+        versionName param.versionName
+        testInstrumentationRunner "${applicationId}.runner.RxAndroidJUnitRunner"
+    }
+    signingConfigs {
+        config {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile keystoreProperties['storeFile'] == null ? null : file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.config
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            versionNameSuffix " Dev"
+            debuggable true
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    sourceSets {
+        def commonTestDir = 'src/commonTest/java'
+        test {
+            java.srcDir commonTestDir
+        }
+        androidTest {
+            java.srcDir commonTestDir
+        }
+    }
+
+    //Needed because of this https://github.com/square/okio/issues/58
+    lintOptions {
+        warning 'InvalidPackage'
+        abortOnError false
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile lib.appcompat
+    compile lib.support_annotations
+    compile lib.support_design
+    compile lib.recyclerview
+    compile lib.cardview
+
+    compile lib.dagger
+    annotationProcessor lib.dagger_apt
+    compile lib.timber
+    compile lib.butterknife
+    annotationProcessor lib.butterknife_apt
+    compile lib.rxjava
+    compile lib.rxandroid
+    compile lib.material_dialog_core
+    compile lib.okhttp
+    debugCompile lib.okhttp_logger
+    debugCompile lib.stetho
+    debugCompile lib.stetho_okhttp
+
+    compile lib.retrofit
+    compile lib.retrofit_gson
+    compile lib.retrofit_rx
+
+    compile lib.multistateview
+    compile lib.recyclerviewAdapter
+    compile lib.icepick
+    provided lib.icepick_processor
+    compile lib.glide
+    compile lib.utilcode
+
+    //test
+    androidTestAnnotationProcessor lib.dagger_apt
+    androidTestCompile lib.junit
+    androidTestCompile(lib.espresso_core, {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+    androidTestCompile(lib.espresso_contrib) {
+        exclude module: 'support-annotations'
+        exclude module: 'support-v4'
+        exclude module: 'support-v13'
+        exclude module: 'recyclerview-v7'
+        exclude module: 'appcompat-v7'
+        exclude module: 'design'
+    }
+    androidTestCompile lib.mockito_core
+    androidTestCompile lib.mockito_android
+
+    testAnnotationProcessor lib.dagger_apt
+    testCompile lib.junit
+    testCompile lib.mockito_core
+//    testCompile lib.mockito_android
+}
+
+def publish = project.tasks.create("publishAll")
+android.applicationVariants.all { variant ->
+    //rename files
+    variant.outputs.each { output ->
+        def targetPath = new File("${rootDir}/archive/")
+        def date = new Date().format('yyyy_MM_dd')
+        output.outputFile = new File(
+                targetPath,
+                output.outputFile.name
+                        .replace("app-", "${APP_NAME}-")
+                        .replace("debug", "Dev")
+                        .replace("release", "Prod")
+                        .replace(".apk", "-${date}.apk")
+
+        )
+    }
+    //end rename
+    def task = project.tasks.create("publish${variant.name}Apk", Copy)
+    println("output: " + variant.outputs[0].outputFile)
+    println("projectDir: " + projectDir)
+    task.from(variant.outputs[0].outputFile)
+    task.into(projectDir)
+    task.dependsOn variant.assemble
+    publish.dependsOn task
+}

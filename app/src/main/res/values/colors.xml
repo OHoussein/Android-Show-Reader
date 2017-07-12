@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#FCBE56</color>
+    <color name="colorPrimaryDark">#dc8a00</color>
+    <color name="colorAccent">#FF4081</color>
+
+    <color name="colorPrimary.semi_transparent">#77FCBE56</color>
+
+    <color name="article.item.bg">#FFFF</color>
+</resources>
